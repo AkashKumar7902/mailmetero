@@ -1,0 +1,45 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # ── DAG + lint + types + unit tests ──
+      - run: pnpm depgraph:check          # §6 DAG intact (no cycles / undeclared edges)
+      - run: pnpm lint                    # egress-import + scoring-magic-number rules
+      - run: pnpm typecheck
+      - run: pnpm test:unit
+
+      # ── the 6 mailmetero compliance invariants (§9, U12) ──
+      - run: pnpm ci:dag                  # every @mailmetero/* edge ∈ ALLOWED; no cycles (§6)
+      - run: pnpm ci:frozen-registries    # enum/registry snapshots pinned (§9.2)
+      - run: pnpm ci:no-suppression-leak  # no suppress|object|blocked_contact member (§9.3, D5)
+      - run: pnpm ci:kb-no-pii            # no person columns in kb.* migrations (§9.6, D7)
+      - run: pnpm ci:suppression-paths    # suppression checked on every find/verify path (§7.1)
+      - run: pnpm ci:egress-allowlist     # only DoH/verifier/ESP hosts reachable (§7.6, P0-11)
+
+  integration:
+    runs-on: ubuntu-latest
+    # opt-in: needs a throwaway Neon branch URL in repo secrets
+    if: ${{ github.event_name == 'push' }}
+    env:
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "26" }
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test:integration

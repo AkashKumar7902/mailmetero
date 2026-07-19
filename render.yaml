@@ -1,0 +1,210 @@
+# mailmetero — Render Blueprint (D15, D20, D23)
+# web (api) + worker + cron on paid Starter. Neon is EXTERNAL (not a Render DB),
+# so DATABASE_URL* come from the shared env group, never `fromDatabase`.
+# Region oregon == us-west, co-located with Neon aws-us-west-2 to cut RTT.
+# Migrations run in web.preDeployCommand on the UNPOOLED url (D20): one place,
+# runs once per deploy before traffic shifts, never from the worker/cron.
+
+envVarGroups:
+  - name: mailmetero-shared
+    envVars:
+      # ── connection strings (Neon; set as dashboard secrets, not in git) ──
+      - key: DATABASE_URL            # pooled  (-pooler host) — web request pool
+        sync: false
+      - key: DATABASE_URL_UNPOOLED   # direct host — worker, cron, migrations
+        sync: false
+      # ── secrets ──
+      - key: APP_PEPPER              # HMAC-SHA256 pepper for api_keys.key_hash (D20)
+        sync: false
+      - key: APP_PEPPER_PREVIOUS     # optional: rotation verification window (OQ8)
+        sync: false
+      - key: SUPPRESSION_SALT        # salt for suppression_global SHA-256 (D5)
+        sync: false
+      - key: VERIFIER_API_KEY        # MillionVerifier-class vendor key (D21)
+        sync: false
+      - key: ESP_API_KEY             # Postmark-class server token (D19)
+        sync: false
+      # ── non-secret shared config ──
+      # Pin Node exactly (M7): package.json requires node>=26 with engine-strict,
+      # and migrations run from .ts needing native type-stripping (>=23.6). This
+      # value mirrors the committed .node-version (26.4.0, locally validated).
+      - key: NODE_VERSION
+        value: 26.4.0
+      - key: VERIFIER_API_BASE_URL
+        value: https://api.millionverifier.com
+      - key: ESP_API_BASE_URL
+        value: https://api.postmarkapp.com
+      - key: ESP_FROM_EMAIL
+        value: no-reply@mail.mailmetero.com
+      - key: ESP_MESSAGE_STREAM
+        value: outbound
+      - key: DOH_PRIMARY_URL
+        value: https://dns.google/resolve
+      - key: DOH_FALLBACK_URL
+        value: https://cloudflare-dns.com/dns-query
+      - key: PUBLIC_BASE_URL
+        value: https://api.mailmetero.com
+      - key: LOG_LEVEL
+        value: info
+      # ── kill switches / spend caps (D12) ──
+      - key: KILL_SWITCH_VERIFIER    # 'on' halts all paid verify → degrade backend=none
+        value: "off"
+      - key: KILL_SWITCH_SIGNUP
+        value: "off"
+      - key: GLOBAL_DAILY_VERIFIER_SPEND_CAP_USD
+        value: "50"
+      - key: DEFAULT_TENANT_DAILY_SPEND_CAP_USD
+        value: "5"
+
+services:
+  # ── web: Fastify /v2 API ────────────────────────────────────────────────
+  - type: web
+    name: mailmetero-api
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /healthz
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    # migrations run ONCE here, pre-traffic, on the unpooled URL (D20)
+    preDeployCommand: pnpm migrate up
+    startCommand: node packages/api/dist/index.js
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: web
+      - key: NODE_ENV
+        value: production
+      # PORT is injected by Render automatically.
+
+  # ── worker: SKIP LOCKED job consumer (D20; unpooled URL) ────────────────
+  - type: worker
+    name: mailmetero-worker
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/worker/dist/index.js
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: worker
+      - key: NODE_ENV
+        value: production
+
+  # ── crons (P0-15). Each is its own subcommand of the cron entrypoint. ───
+  # Render cron guarantees a single active run per schedule. All UTC.
+  - type: cron
+    name: mailmetero-cron-ttl-purge          # nightly person-level TTL purge (P0-11)
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "17 3 * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/cron/dist/index.js ttl-purge
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: cron
+      - key: NODE_ENV
+        value: production
+
+  - type: cron
+    name: mailmetero-cron-blocklist-sync      # weekly freemail/disposable/typo sync
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "40 4 * * 1"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/cron/dist/index.js blocklist-sync
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: cron
+      - key: NODE_ENV
+        value: production
+
+  - type: cron
+    name: mailmetero-cron-stuck-job-sweep     # requeue jobs stuck in 'claimed'
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "*/10 * * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/cron/dist/index.js stuck-job-sweep
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: cron
+      - key: NODE_ENV
+        value: production
+
+  - type: cron
+    name: mailmetero-cron-quota-spend-reset    # daily quota-period + verifier spend-counter reset (P0-9)
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "5 0 * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/cron/dist/index.js quota-spend-reset
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: cron
+      - key: NODE_ENV
+        value: production
+
+  - type: cron
+    name: mailmetero-cron-credit-back-sweep    # refund credits for stuck/failed async items >30m (P0-9)
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "*/15 * * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/cron/dist/index.js credit-back-sweep
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: cron
+      - key: NODE_ENV
+        value: production
+
+  - type: cron
+    name: mailmetero-cron-quota-alert          # 80% / 100% quota alert emails (P0-14)
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "0 * * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/cron/dist/index.js quota-alert
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: cron
+      - key: NODE_ENV
+        value: production
+
+  - type: cron
+    name: mailmetero-cron-objection-expiry     # null out stale pending objection tokens
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "30 2 * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    startCommand: node packages/cron/dist/index.js objection-expiry
+    envVars:
+      - fromGroup: mailmetero-shared
+      - key: SERVICE_ROLE
+        value: cron
+      - key: NODE_ENV
+        value: production

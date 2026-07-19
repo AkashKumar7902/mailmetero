@@ -1,0 +1,10 @@
+{
+  "//": "node-pg-migrate config (D20). Loaded explicitly via `--config-file` from the root `migrate` script (v7 does NOT auto-discover this filename). Keys are the CLI long-option names (kebab-case) that node-pg-migrate's readJson understands. The migrations ALWAYS run on the UNPOOLED direct Neon host: the DSN env var is named on the CLI (`--database-url-var DATABASE_URL_UNPOOLED`) because a value placed here would be treated as a literal DSN, not an env-var name. Session-level DDL must never traverse PgBouncer. Migration FILES are owned by @mailmetero/db. Invoked as `pnpm migrate up` (web.preDeployCommand).",
+  "migrations-dir": "packages/db/migrations",
+  "migrations-table": "pgmigrations",
+  "migration-file-language": "ts",
+  "schema": ["public", "kb", "ops"],
+  "create-schema": true,
+  "check-order": true,
+  "verbose": true
+}

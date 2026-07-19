@@ -1,0 +1,37 @@
+{
+  "name": "mailmetero",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=26.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "test": "pnpm test:unit",
+    "test:unit": "node --test --experimental-test-coverage \"packages/*/src/**/*.test.ts\" \"packages/*/test/**/*.test.ts\"",
+    "test:integration": "node --test --test-setup tools/test/setup-integration.ts \"packages/*/src/**/*.integration.test.ts\" \"packages/*/test/**/*.integration.test.ts\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --build --dry",
+    "migrate": "node-pg-migrate --config-file .node-pg-migraterc.json --database-url-var DATABASE_URL_UNPOOLED",
+    "depgraph:check": "depcruise --config dependency-cruiser.config.cjs packages",
+    "ci:dag": "node --test tools/ci/check-dag.test.ts",
+    "ci:kb-no-pii": "node --test tools/ci/check-kb-no-pii.test.ts",
+    "ci:suppression-paths": "node --test tools/ci/check-suppression-paths.test.ts",
+    "ci:egress-allowlist": "node --test tools/ci/check-egress-allowlist.test.ts",
+    "ci:frozen-registries": "node --test tools/ci/check-frozen-registries.test.ts",
+    "ci:no-suppression-leak": "node --test tools/ci/check-no-suppression-leak.test.ts",
+    "ci:all": "pnpm depgraph:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm ci:dag && pnpm ci:frozen-registries && pnpm ci:no-suppression-leak && pnpm ci:kb-no-pii && pnpm ci:suppression-paths && pnpm ci:egress-allowlist"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "dependency-cruiser": "^16.0.0",
+    "eslint": "^9.0.0",
+    "node-pg-migrate": "^7.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

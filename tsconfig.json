@@ -1,0 +1,17 @@
+{
+  "//": "Solution file: build graph via project references. Order is informational; tsc resolves the DAG from each package's own references (which mirror CONTRACTS_CORE §6).",
+  "files": [],
+  "references": [
+    { "path": "packages/contracts" },
+    { "path": "packages/config" },
+    { "path": "packages/core" },
+    { "path": "packages/db" },
+    { "path": "packages/dns" },
+    { "path": "packages/verifier" },
+    { "path": "packages/email" },
+    { "path": "packages/pipeline" },
+    { "path": "packages/api" },
+    { "path": "packages/worker" },
+    { "path": "packages/cron" }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../contracts" },
+    { "path": "../config" },
+    { "path": "../core" },
+    { "path": "../db" },
+    { "path": "../dns" },
+    { "path": "../verifier" },
+    { "path": "../pipeline" }
+  ]
+}

@@ -1,0 +1,161 @@
+exports[`frozen registries 1`] = `
+{
+  "STATUSES": [
+    "valid",
+    "invalid",
+    "accept_all",
+    "unknown",
+    "disposable",
+    "webmail",
+    "role"
+  ],
+  "SUB_STATUSES": [
+    "ok",
+    "invalid_mailbox",
+    "null_mx",
+    "no_mail_host",
+    "disabled",
+    "invalid_syntax",
+    "catch_all_confirmed",
+    "provider_unverifiable",
+    "timeout",
+    "backend_unavailable",
+    "gateway_blocked",
+    "implicit_mx_only"
+  ],
+  "MX_ENUMS": [
+    "EXPLICIT_MX",
+    "IMPLICIT_MX_FALLBACK",
+    "NULL_MX",
+    "NO_MAIL_HOST"
+  ],
+  "PROVIDERS": [
+    "microsoft365",
+    "google_workspace",
+    "gmail_consumer",
+    "yahoo_consumer",
+    "proofpoint",
+    "mimecast",
+    "ironport",
+    "barracuda",
+    "zoho",
+    "proton",
+    "other"
+  ],
+  "VERIFIABILITY_CLASSES": [
+    "UNVERIFIABLE",
+    "UNKNOWN",
+    "VERIFIABLE_WITH_CATCHALL_GUARD",
+    "VERIFIABLE_GREYLIST_RETRY",
+    "GATEWAY_CONFIG_DEPENDENT"
+  ],
+  "EVIDENCE_TIERS": [
+    "verified",
+    "learned_pattern",
+    "prior_only",
+    "dns",
+    "classifier",
+    "syntax",
+    "capped",
+    "degraded"
+  ],
+  "BACKENDS": [
+    "api",
+    "none",
+    "smtp"
+  ],
+  "PIPELINE_STAGES": [
+    "canonicalize_syntax",
+    "suppression_check",
+    "classification_tables",
+    "tenant_cache",
+    "kb_domain_facts",
+    "dns_enum",
+    "provider_fingerprint",
+    "verifier_backend",
+    "score_and_writeback"
+  ],
+  "SIZE_BRACKETS": [
+    "micro",
+    "small",
+    "medium",
+    "large",
+    "enterprise"
+  ],
+  "SOURCE_TAGS": [
+    "derivation"
+  ],
+  "JOB_STATUSES": [
+    "queued",
+    "claimed",
+    "running",
+    "done",
+    "failed"
+  ],
+  "RESPONSE_HEADERS": [
+    "X-Request-Id",
+    "X-Billed",
+    "X-Credits-Remaining",
+    "X-RateLimit-Limit",
+    "X-RateLimit-Remaining",
+    "X-RateLimit-Reset"
+  ],
+  "REASON_CODES": [
+    "pattern_learned_domain",
+    "pattern_prior_small_company",
+    "pattern_prior_micro_company",
+    "pattern_prior_midsize_company",
+    "pattern_prior_enterprise",
+    "pattern_prior_unknown_size",
+    "nickname_variant",
+    "compound_surname_variant",
+    "german_fold_variant",
+    "cjk_ambiguous_downweight",
+    "collision_risk_high",
+    "collision_middle_initial_candidate",
+    "collision_numeric_suffix_candidate",
+    "dns_explicit_mx",
+    "dns_implicit_mx_only",
+    "dns_null_mx",
+    "dns_no_mail_host",
+    "provider_m365_cap",
+    "provider_gateway_config_dependent",
+    "catch_all_cap",
+    "catch_all_confirmed",
+    "prior_only_catch_all_cap",
+    "implicit_mx_cap",
+    "verifier_confirmed_valid",
+    "verifier_confirmed_invalid",
+    "smtp_5_1_1",
+    "gateway_policy_block",
+    "mailbox_disabled",
+    "freemail_domain",
+    "disposable_domain",
+    "role_account",
+    "typo_domain_corrected",
+    "invalid_syntax",
+    "cache_hit_tenant",
+    "kb_domain_fact_hit",
+    "backend_degraded",
+    "backend_unavailable",
+    "backend_timeout"
+  ],
+  "ERROR_CODES": [
+    "invalid_api_key",
+    "insufficient_credits",
+    "rate_limited",
+    "invalid_domain",
+    "domain_required",
+    "verification_unavailable",
+    "job_pending",
+    "idempotency_conflict",
+    "payload_too_large",
+    "invalid_email",
+    "validation_error",
+    "not_found",
+    "signup_disposable_blocked",
+    "service_unavailable",
+    "internal_error"
+  ]
+}
+`;
