@@ -183,4 +183,6 @@ export interface ApiDeps {
   compliance: ComplianceIntakePort;
   sandbox: SandboxRouter;
   core: CoreDeps;
+  /** Internal tenant that backs the public, no-key web finder page (`/` + `/app/find`). */
+  webTenantId: TenantId;
 }

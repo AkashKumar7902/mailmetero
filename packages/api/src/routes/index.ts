@@ -12,6 +12,7 @@ import { bulkRoutes } from './bulk.ts';
 import { accountRoutes } from './account.ts';
 import { complianceRoutes } from './compliance.ts';
 import { metaRoutes } from './meta.ts';
+import { webRoutes } from './web.ts';
 
 export async function registerRoutes(app: FastifyInstance, deps: ApiDeps): Promise<void> {
   finderRoutes(app, deps);
@@ -20,4 +21,5 @@ export async function registerRoutes(app: FastifyInstance, deps: ApiDeps): Promi
   accountRoutes(app, deps);
   complianceRoutes(app, deps);
   metaRoutes(app, deps);
+  webRoutes(app, deps);
 }

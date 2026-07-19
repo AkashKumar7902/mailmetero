@@ -344,11 +344,19 @@ export async function buildApiDeps(input: { boot: BootContext; pools: DbPools })
 
   const scoring = { current: () => scoringRepo.loadActive(web) };
 
+  // Public web-tool tenant that backs the no-key finder page (`/` + `/app/find`). Idempotent
+  // bootstrap so it exists on any deploy; carries 0 credits (the web path never bills).
+  let webTenant = await tenants.byOwnerEmail(web, 'web@mailmetero.internal');
+  if (webTenant === null) {
+    webTenant = await tenants.create(web, { ownerEmail: 'web@mailmetero.internal', planName: 'web-tool', creditsRemaining: 0 });
+  }
+
   const deps: ApiDeps = {
     config: appConfig.api,
     auth,
     scoring,
     pipeline,
+    webTenantId: webTenant.id,
     sandbox: createSandboxRouter(),
     core: {
       normalizeName,
