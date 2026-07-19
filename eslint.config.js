@@ -7,9 +7,11 @@ import tseslint from 'typescript-eslint';
 const BANNED_NET_IMPORTS = ['node:http', 'node:https', 'http', 'https', 'undici', 'axios', 'got', 'node-fetch'];
 
 export default tseslint.config(
+  // Never lint build output or deps — only source. (dist/*.d.ts break the TS parser.)
+  { ignores: ['**/dist/**', '**/node_modules/**', 'coverage/**'] },
   {
-    files: ['packages/**/*.ts'],
-    languageOptions: { parserOptions: { projectService: true } },
+    files: ['packages/**/src/**/*.ts'],
+    languageOptions: { parser: tseslint.parser },
     rules: {
       // (A) egress allowlist: force all outbound HTTP through @mailmetero/config's egressFetch.
       'no-restricted-imports': ['error', { paths: BANNED_NET_IMPORTS.map((name) => ({
@@ -24,7 +26,7 @@ export default tseslint.config(
   },
   {
     // @mailmetero/config IS the choke point — it may use fetch + node:http(s).
-    files: ['packages/config/**/*.ts'],
+    files: ['packages/config/src/**/*.ts'],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-globals': 'off' },
   },
   {
