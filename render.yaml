@@ -66,7 +66,7 @@ services:
     branch: main
     autoDeploy: true
     healthCheckPath: /healthz
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     # migrations run ONCE here, pre-traffic, on the unpooled URL (D20)
     preDeployCommand: pnpm migrate up
     startCommand: node packages/api/dist/index.js
@@ -86,7 +86,7 @@ services:
     region: oregon
     branch: main
     autoDeploy: true
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/worker/dist/index.js
     envVars:
       - fromGroup: mailmetero-shared
@@ -104,7 +104,7 @@ services:
     region: oregon
     branch: main
     schedule: "17 3 * * *"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/cron/dist/index.js ttl-purge
     envVars:
       - fromGroup: mailmetero-shared
@@ -120,7 +120,7 @@ services:
     region: oregon
     branch: main
     schedule: "40 4 * * 1"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/cron/dist/index.js blocklist-sync
     envVars:
       - fromGroup: mailmetero-shared
@@ -136,7 +136,7 @@ services:
     region: oregon
     branch: main
     schedule: "*/10 * * * *"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/cron/dist/index.js stuck-job-sweep
     envVars:
       - fromGroup: mailmetero-shared
@@ -152,7 +152,7 @@ services:
     region: oregon
     branch: main
     schedule: "5 0 * * *"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/cron/dist/index.js quota-spend-reset
     envVars:
       - fromGroup: mailmetero-shared
@@ -168,7 +168,7 @@ services:
     region: oregon
     branch: main
     schedule: "*/15 * * * *"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/cron/dist/index.js credit-back-sweep
     envVars:
       - fromGroup: mailmetero-shared
@@ -184,7 +184,7 @@ services:
     region: oregon
     branch: main
     schedule: "0 * * * *"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/cron/dist/index.js quota-alert
     envVars:
       - fromGroup: mailmetero-shared
@@ -200,7 +200,7 @@ services:
     region: oregon
     branch: main
     schedule: "30 2 * * *"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm -r build
     startCommand: node packages/cron/dist/index.js objection-expiry
     envVars:
       - fromGroup: mailmetero-shared
