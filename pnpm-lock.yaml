@@ -8,6 +8,18 @@ importers:
 
   .:
     devDependencies:
+      '@mailmetero/config':
+        specifier: workspace:*
+        version: link:packages/config
+      '@mailmetero/contracts':
+        specifier: workspace:*
+        version: link:packages/contracts
+      '@mailmetero/db':
+        specifier: workspace:*
+        version: link:packages/db
+      '@mailmetero/pipeline':
+        specifier: workspace:*
+        version: link:packages/pipeline
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3

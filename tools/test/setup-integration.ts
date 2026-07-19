@@ -4,7 +4,10 @@
 // touch this file and need no DB. Owned by config-deploy-ops.
 import { before, type TestContext } from 'node:test';
 
-export const INTEGRATION_DSN = process.env.DATABASE_URL_TEST ?? null;
+// Treat an unset OR empty value as absent: CI passes `${{ secrets.DATABASE_URL_TEST }}` which
+// becomes an empty string (not undefined) when the secret is missing, and `'' ?? null` is `''`.
+const RAW_TEST_DSN = process.env.DATABASE_URL_TEST;
+export const INTEGRATION_DSN = RAW_TEST_DSN && RAW_TEST_DSN.trim() !== '' ? RAW_TEST_DSN : null;
 export const hasDb = INTEGRATION_DSN !== null;
 
 before(() => {

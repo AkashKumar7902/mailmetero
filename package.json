@@ -27,6 +27,10 @@
     "ci:all": "pnpm depgraph:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm ci:dag && pnpm ci:frozen-registries && pnpm ci:no-suppression-leak && pnpm ci:kb-no-pii && pnpm ci:suppression-paths && pnpm ci:egress-allowlist"
   },
   "devDependencies": {
+    "@mailmetero/config": "workspace:*",
+    "@mailmetero/contracts": "workspace:*",
+    "@mailmetero/db": "workspace:*",
+    "@mailmetero/pipeline": "workspace:*",
     "@types/node": "^24.0.0",
     "dependency-cruiser": "^16.0.0",
     "eslint": "^9.0.0",
