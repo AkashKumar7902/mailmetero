@@ -7,11 +7,11 @@
 import { boot } from '@mailmetero/config';
 import { closePools } from '@mailmetero/db';
 import { loadWorkerConfig, buildWorkerDeps } from './deps.ts';
-import { runWorkerLoop } from './loop.ts';
+import { runWorkerLoop, runWorkerDrain } from './loop.ts';
 
 export type { WorkerConfig, WorkerDeps } from './deps.ts';
 export { loadWorkerConfig, buildWorkerDeps } from './deps.ts';
-export { runWorkerLoop } from './loop.ts';
+export { runWorkerLoop, runWorkerDrain } from './loop.ts';
 export type { JobProcessor } from './processors/registry.ts';
 export { PROCESSORS } from './processors/registry.ts';
 export {
@@ -69,9 +69,34 @@ export async function bootstrapWorker(): Promise<void> {
   }
 }
 
-// Run when invoked directly (node dist/index.js), not when imported.
+/**
+ * Drain-and-exit entrypoint for the free scheduled-Action model: boot, wire deps, drain the ready
+ * queue once, close pools, and return. Invoked as `node packages/worker/dist/index.js drain`.
+ */
+export async function bootstrapWorkerDrain(): Promise<void> {
+  const bootCtx = boot();
+  const cfg = loadWorkerConfig(bootCtx.env);
+  const deps = await buildWorkerDeps(bootCtx);
+
+  const controller = new AbortController();
+  const onSignal = (): void => controller.abort();
+  process.once('SIGTERM', onSignal);
+  process.once('SIGINT', onSignal);
+
+  try {
+    const processed = await runWorkerDrain(cfg, deps, controller.signal);
+    deps.logger.info({ processed }, 'worker: drain run finished');
+  } finally {
+    process.removeListener('SIGTERM', onSignal);
+    process.removeListener('SIGINT', onSignal);
+    await closePools(deps.pools);
+  }
+}
+
+// Run when invoked directly (node dist/index.js [drain]), not when imported.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  bootstrapWorker().catch((err: unknown) => {
+  const run = process.argv[2] === 'drain' ? bootstrapWorkerDrain : bootstrapWorker;
+  run().catch((err: unknown) => {
     // eslint-disable-next-line no-console
     console.error('worker: fatal', err);
     process.exit(1);

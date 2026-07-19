@@ -113,3 +113,32 @@ export async function runWorkerLoop(cfg: WorkerConfig, deps: WorkerDeps, signal:
   }
   deps.logger.info({ workerId: cfg.workerId }, 'worker: loop stopped');
 }
+
+/**
+ * Drain-and-exit variant: claim + process ready jobs in batches until an empty claim (queue
+ * drained), then return the count processed. This is the free-tier execution model — a scheduled
+ * GitHub Action invokes `node packages/worker/dist/index.js drain` every few minutes instead of
+ * running a long-lived worker dyno. Retryable failures are released with a future run_after, so a
+ * single drain never spins on them; the next scheduled drain picks them up once ready.
+ */
+export async function runWorkerDrain(cfg: WorkerConfig, deps: WorkerDeps, signal: AbortSignal): Promise<number> {
+  deps.logger.info({ workerId: cfg.workerId, batchSize: cfg.batchSize }, 'worker: drain started');
+  let processed = 0;
+  while (!signal.aborted) {
+    let batch: JobRow[];
+    try {
+      batch = await deps.jobs.claim(deps.pools.direct, cfg.workerId, cfg.batchSize, cfg.visibilityMs);
+    } catch (err) {
+      deps.logger.error({ err: String(err) }, 'worker: drain claim failed');
+      break;
+    }
+    if (batch.length === 0) break;
+    for (const job of batch) {
+      if (signal.aborted) break;
+      await dispatchJob(job, cfg, deps, signal);
+      processed += 1;
+    }
+  }
+  deps.logger.info({ workerId: cfg.workerId, processed }, 'worker: drain complete');
+  return processed;
+}

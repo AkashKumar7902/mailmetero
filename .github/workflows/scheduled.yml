@@ -1,0 +1,101 @@
+# Free-tier execution of the mailmetero worker + crons on GitHub Actions.
+#
+# Render has no free background-worker or cron tier, so on the free stack these run here instead
+# (public repo => free minutes), against the same Neon DB the Render free web service uses. Each
+# schedule maps 1:1 to a job; the worker "drain" claims + processes the ready queue then exits.
+# Real secrets come from repo secrets; the verifier/ESP are placeholders with the verifier kill
+# switch on (derive+score mode), matching the Render env group.
+name: scheduled
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run manually
+        required: true
+        default: worker-drain
+        type: choice
+        options:
+          - worker-drain
+          - ttl-purge
+          - blocklist-sync
+          - stuck-job-sweep
+          - quota-spend-reset
+          - credit-back-sweep
+          - quota-alert
+          - objection-expiry
+  schedule:
+    - cron: '*/15 * * * *'        # worker-drain — process queued bulk/async jobs
+    - cron: '*/10 * * * *'        # stuck-job-sweep — requeue jobs a crashed run left claimed
+    - cron: '0 * * * *'           # quota-alert — 80%/100% usage emails
+    - cron: '7,22,37,52 * * * *'  # credit-back-sweep — refund stuck/downgraded billables
+    - cron: '17 3 * * *'          # ttl-purge — nightly person-data retention purge
+    - cron: '5 0 * * *'           # quota-spend-reset — daily quota + spend-counter reset
+    - cron: '30 2 * * *'          # objection-expiry — expire stale opt-out tokens
+    - cron: '40 4 * * 1'          # blocklist-sync — weekly freemail/disposable/typo refresh
+
+concurrency:
+  group: mailmetero-scheduled-${{ github.event.schedule || github.event.inputs.job }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+      APP_PEPPER: ${{ secrets.APP_PEPPER }}
+      SUPPRESSION_SALT: ${{ secrets.SUPPRESSION_SALT }}
+      # non-secret config (mirrors the Render env group)
+      VENDOR_DIR: ${{ github.workspace }}/data/vendor
+      VERIFIER_API_KEY: disabled-placeholder-set-a-real-millionverifier-key
+      ESP_API_KEY: disabled-placeholder-set-a-real-postmark-token
+      KILL_SWITCH_VERIFIER: "on"
+      KILL_SWITCH_SIGNUP: "off"
+      VERIFIER_API_BASE_URL: https://api.millionverifier.com
+      ESP_API_BASE_URL: https://api.postmarkapp.com
+      ESP_FROM_EMAIL: no-reply@mail.mailmetero.com
+      ESP_MESSAGE_STREAM: outbound
+      DOH_PRIMARY_URL: https://dns.google/resolve
+      DOH_FALLBACK_URL: https://cloudflare-dns.com/dns-query
+      PUBLIC_BASE_URL: https://mailmetero-api.onrender.com
+      LOG_LEVEL: info
+      GLOBAL_DAILY_VERIFIER_SPEND_CAP_USD: "50"
+      DEFAULT_TENANT_DAILY_VERIFIER_SPEND_CAP_USD: "5"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Build workspace
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+          pnpm -r build
+      - name: Run scheduled job
+        run: |
+          set -euo pipefail
+          SCHED="${{ github.event.schedule }}"
+          MANUAL="${{ github.event.inputs.job }}"
+          run_cron() { node packages/cron/dist/index.js "$1"; }
+          run_worker() { node packages/worker/dist/index.js drain; }
+          if [ -n "$MANUAL" ]; then
+            case "$MANUAL" in
+              worker-drain) run_worker;;
+              *) run_cron "$MANUAL";;
+            esac
+            exit 0
+          fi
+          case "$SCHED" in
+            '*/15 * * * *')         run_worker;;
+            '*/10 * * * *')         run_cron stuck-job-sweep;;
+            '0 * * * *')            run_cron quota-alert;;
+            '7,22,37,52 * * * *')   run_cron credit-back-sweep;;
+            '17 3 * * *')           run_cron ttl-purge;;
+            '5 0 * * *')            run_cron quota-spend-reset;;
+            '30 2 * * *')           run_cron objection-expiry;;
+            '40 4 * * 1')           run_cron blocklist-sync;;
+            *) echo "no mapping for schedule '$SCHED'"; exit 1;;
+          esac
